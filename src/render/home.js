@@ -52,7 +52,7 @@ function hero() {
           <button class="film-skip" type="button" data-film-skip>Пропустить</button>
         </div>
         <ol class="film-chips" aria-label="Этапы">${FILM.map(
-          (s, i) => `<li><button class="film-chip${i === 0 ? ' is-active' : ''}" type="button" data-film-chip="${i}"><span>${i + 1}</span>${s.chip}</button></li>`,
+          (s, i) => `<li><button class="film-chip${i === 0 ? ' is-active' : ''}" type="button" data-film-chip="${i}"><span class="film-chip-num">${i + 1}</span><span class="film-chip-text">${s.chip}</span></button></li>`,
         ).join('')}</ol>
         <div class="film-progress" aria-hidden="true"><i data-film-bar></i></div>
       </div>

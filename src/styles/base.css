@@ -511,6 +511,13 @@ main > section,
   position: relative;
 }
 
+/* Nothing may widen the page: on iPhone the overflow rule on <body> goes to the viewport, where Safari
+   still lets a finger drag the page sideways if anything sticks out. Clipping here holds in every browser. */
+main,
+.site-footer {
+  overflow-x: clip;
+}
+
 .section-head {
   position: relative;
   display: grid;

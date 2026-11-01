@@ -300,6 +300,8 @@ export function film() {
 
   // ---------- input: wheel, touch, keys ----------
   const blocked = () => document.querySelector('dialog[open]') || document.documentElement.classList.contains('menu-open');
+  // The intro curtain is up: gestures do nothing yet (no hidden film play, no page scroll under it).
+  const loading = () => document.documentElement.classList.contains('is-loading');
   // The film owns the gesture only while it is at the very top and has somewhere to go.
   const canHandle = (d) => scrollY <= 1 && ((d > 0 && idx < LAST) || (d < 0 && idx > 0)) && !blocked();
 
@@ -313,6 +315,14 @@ export function film() {
     (e) => {
       if (e.ctrlKey || Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
       const now = performance.now();
+      if (loading()) {
+        // swallow, and let the first wheel event after the curtain start the film
+        e.preventDefault();
+        armed = true;
+        owned = false;
+        lastWheel = 0;
+        return;
+      }
       const abs = Math.abs(e.deltaY) * (e.deltaMode === 1 ? 40 : 1);
       // A new gesture: a pause in the wheel stream, or — on a trackpad, where a new flick lands on the
       // inertia tail of the previous one — the film is resting and the wheel speeds up again (the tail
@@ -378,6 +388,12 @@ export function film() {
   addEventListener(
     'touchmove',
     (e) => {
+      if (loading()) {
+        e.preventDefault();
+        touchDir = 0;
+        touchOwned = false;
+        return;
+      }
       const dy = ty - e.touches[0].clientY;
       const dx = tx - e.touches[0].clientX;
       if (!touchDir && Math.abs(dy) > 8 && Math.abs(dy) > Math.abs(dx)) {
@@ -405,6 +421,7 @@ export function film() {
     const down = e.key === 'ArrowDown' || e.key === 'PageDown' || (e.key === ' ' && e.target === document.body);
     const up = e.key === 'ArrowUp' || e.key === 'PageUp';
     if (!down && !up) return;
+    if (loading()) return e.preventDefault();
     const d = down ? 1 : -1;
     if (!canHandle(d)) return;
     e.preventDefault();
