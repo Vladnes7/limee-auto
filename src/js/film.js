@@ -77,6 +77,21 @@ export function film() {
   const facts = root.querySelector('[data-film-facts]');
   const skip = root.querySelector('[data-film-skip]');
 
+  // ?debug=1 in the address: a small log on screen of what the film does (for checking on a real phone).
+  const debug = /[?&]debug=1\b/.test(location.search);
+  let logBox = null;
+  const log = (msg) => {
+    if (!debug) return;
+    if (!logBox) {
+      logBox = document.createElement('pre');
+      logBox.style.cssText =
+        'position:fixed;left:8px;right:8px;top:72px;z-index:9999;margin:0;padding:8px 10px;border-radius:8px;background:rgba(0,0,0,.82);color:#d5ff00;font:11px/1.4 ui-monospace,monospace;white-space:pre-wrap;pointer-events:none';
+      document.body.append(logBox);
+    }
+    const line = `${(performance.now() / 1000).toFixed(1)}s  ${msg}`;
+    logBox.textContent = [line, ...logBox.textContent.split('\n')].slice(0, 12).join('\n');
+  };
+
   const still = reducedMotion(); // no travelling video: stops are reached by an instant cut
   const phone = matchMedia('(max-width: 760px)').matches;
   const conn = navigator.connection || {};
@@ -158,6 +173,7 @@ export function film() {
   }
 
   function rest() {
+    log(`rest at stop ${idx + 1}/${LAST + 1} (t ${STOPS[idx]})`);
     moving = false;
     restAt = performance.now();
     sync(STOPS[idx]);
@@ -198,6 +214,7 @@ export function film() {
   }
 
   function beginSeek(now) {
+    if (dir > 0) log(`player stalled: driving by seeking (ready ${video.readyState}, play failed ${playFailed})`);
     seekMode = true;
     seekFrom = video.currentTime;
     seekT0 = now;
@@ -249,7 +266,10 @@ export function film() {
       if (p >= 1) return finish();
     }
     lastNow = now;
-    if (now > deadline) return finish(); // never stay locked
+    if (now > deadline) {
+      log('deadline: jump to the stop');
+      return finish(); // never stay locked
+    }
     sync();
     raf = requestAnimationFrame(loop);
   }
@@ -257,6 +277,7 @@ export function film() {
   function go(next, fast = false) {
     if (moving || next === idx || next < 0 || next > LAST) return;
     if (still) return snap(next);
+    log(`go ${idx + 1} → ${next + 1}${fast ? ' fast' : ''}${next < idx ? (revReady ? ' (reversed film)' : ' (seeking)') : ''}, src ${video.currentSrc.slice(0, 5)}`);
     moving = true;
     const id = ++leg;
     to = next;
@@ -360,6 +381,12 @@ export function film() {
   let ty = 0;
   let touchDir = 0;
   let touchOwned = false;
+  // The film holds the screen (top of the page, stops left to play): every move of the finger is the
+  // film's from the very first pixel. iOS starts scrolling the page on the first move nobody cancels,
+  // and later moves can no longer stop it — the page slid and the film jumped to the last stop.
+  let touchLock = false;
+  let touchTravel = 0; // how far the finger went: a swipe that starts on a chip is not a tap on it
+  let lastTouchEnd = 0;
   // iOS plays an inline video most reliably once a touch has started it: prime each element once.
   const prime = (el) => {
     if (!el || el.dataset.primed || !el.currentSrc || moving) return;
@@ -380,6 +407,8 @@ export function film() {
       ty = e.touches[0].clientY;
       touchDir = 0;
       touchOwned = false;
+      touchTravel = 0;
+      touchLock = !loading() && scrollY <= 1 && idx < LAST && !blocked();
       prime(video);
       prime(rev);
     },
@@ -396,19 +425,23 @@ export function film() {
       }
       const dy = ty - e.touches[0].clientY;
       const dx = tx - e.touches[0].clientX;
+      touchTravel = Math.max(touchTravel, Math.abs(dy), Math.abs(dx));
       if (!touchDir && Math.abs(dy) > 8 && Math.abs(dy) > Math.abs(dx)) {
         touchDir = dy > 0 ? 1 : -1;
         touchOwned = canHandle(touchDir);
       }
-      if (touchOwned) e.preventDefault();
+      if ((touchLock || touchOwned) && e.cancelable) e.preventDefault();
     },
     { passive: false },
   );
   addEventListener(
     'touchend',
     (e) => {
+      lastTouchEnd = performance.now();
+      touchLock = false;
       if (!touchOwned) return;
       const dy = ty - e.changedTouches[0].clientY;
+      log(`swipe ${touchDir > 0 ? 'down' : 'up'} ${Math.round(dy)}px${moving ? ' (film busy)' : ''}`);
       if (!moving && Math.abs(dy) > 28) go(idx + touchDir);
       touchOwned = false;
     },
@@ -428,15 +461,22 @@ export function film() {
     go(idx + d);
   });
 
-  // The page was scrolled away from the film (scrollbar drag, reload mid-page, anchor): rest on the last stop.
+  // The page was scrolled well away from the film (scrollbar drag, reload mid-page, anchor): rest on the
+  // last stop. A small slip of the page is not "away" — it must never skip the film to its end.
   const away = () => {
-    if (scrollY > 2 && !moving && idx !== LAST) snap(LAST);
+    if (scrollY > root.offsetHeight * 0.5 && !moving && idx !== LAST) {
+      log(`page scrolled away (${Math.round(scrollY)}px): last stop`);
+      snap(LAST);
+    }
   };
   addEventListener('scroll', away, { passive: true });
   addEventListener('load', away);
 
   chips.forEach((chip, i) => {
     chip.addEventListener('click', () => {
+      // a swipe that began on a chip (they sit where the thumb starts) is not a tap on it
+      if (performance.now() - lastTouchEnd < 600 && touchTravel > 6) return log(`chip ${i + 1} ignored: swipe`);
+      log(`chip ${i + 1} tapped`);
       const stop = CHIP_STOP[i];
       if (stop === idx) return;
       go(stop, Math.abs(stop - idx) > 1);
@@ -444,6 +484,7 @@ export function film() {
   });
 
   skip?.addEventListener('click', () => {
+    log('skip pressed');
     if (idx !== LAST) snap(LAST);
     scrollTo({ top: root.getBoundingClientRect().height, behavior: still ? 'auto' : 'smooth' });
   });
@@ -469,6 +510,7 @@ export function film() {
           }
           video.replaceWith(next);
           video = next;
+          log('film in memory');
         });
       },
       { once: true },
@@ -480,7 +522,14 @@ export function film() {
     if (!rev || still) return Promise.resolve();
     return fetchBlob(src).then((url) => {
       if (!url) return;
-      rev.addEventListener('loadeddata', () => (revReady = true), { once: true });
+      rev.addEventListener(
+        'loadeddata',
+        () => {
+          revReady = true;
+          log('reversed film in memory');
+        },
+        { once: true },
+      );
       rev.src = url;
     });
   }

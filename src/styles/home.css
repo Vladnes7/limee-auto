@@ -300,19 +300,23 @@
     padding-top: calc(var(--header-h) + 12px);
   }
 
-  /* Phone: the picture sits in the lower part of the screen, cropped to the car; text is on top. */
-  .film-video {
+  /* Phone: the whole frame across the screen width (film-m.mp4 keeps 84% of the shot, so the car is
+     never cut at any stage), resting right above the buttons; its wet-road bottom slips under them.
+     The buttons start ~182px above the screen bottom on every phone size. Text is above on black. */
+  .film-video,
+  .film-shade {
     top: auto;
-    bottom: 10vh;
-    bottom: 10svh;
-    height: 54vh;
-    height: 54svh;
-    object-position: 52% 55%;
+    bottom: 150px;
+    height: auto;
+    aspect-ratio: 1200 / 804;
+  }
+
+  .film-video {
+    object-position: 50% 50%;
   }
 
   .film-shade {
-    background: linear-gradient(180deg, #050605 0, #050605 34vh, rgba(5, 6, 5, 0) 53vh, rgba(5, 6, 5, 0) 78vh, #050605 91vh);
-    background: linear-gradient(180deg, #050605 0, #050605 34svh, rgba(5, 6, 5, 0) 53svh, rgba(5, 6, 5, 0) 78svh, #050605 91svh);
+    background: linear-gradient(180deg, #050605 0%, rgba(5, 6, 5, 0.5) 16%, rgba(5, 6, 5, 0) 36%, rgba(5, 6, 5, 0) 74%, rgba(5, 6, 5, 0.65) 90%, #050605 100%);
   }
 
   .film-title {
@@ -323,6 +327,8 @@
     margin-top: 12px;
     font-size: 14px;
     max-width: 34ch;
+    /* on short phones the lead can reach the top of the picture */
+    text-shadow: 0 1px 10px rgba(5, 6, 5, 0.9), 0 0 2px rgba(5, 6, 5, 0.6);
   }
 
   .film-facts {
