@@ -11,7 +11,12 @@ async function load(server) {
   return import(`${ROUTES}?t=${Date.now()}`);
 }
 
-const fill = (shell, page) => shell.replace('<!--head-->', page.head).replace('<!--app-->', page.body);
+// Demo and preview addresses (VPS port, vercel.app) must not be indexed under a foreign domain.
+// Build with SITE_INDEX=1 for the real autolimee.ru; every other build tells search engines to stay away.
+const NOINDEX = process.env.SITE_INDEX !== '1';
+
+const fill = (shell, page) =>
+  shell.replace('<!--head-->', (NOINDEX ? '<meta name="robots" content="noindex, nofollow">\n' : '') + page.head).replace('<!--app-->', page.body);
 
 const normalize = (url) => {
   const p = decodeURI((url || '/').split('?')[0].split('#')[0]);
@@ -58,6 +63,10 @@ function staticPages() {
           const page = routesMod.render(route);
           const file = route === '/404/' ? '404.html' : `${route.slice(1)}index.html`;
           this.emitFile({ type: 'asset', fileName: file, source: fill(raw, page) });
+        }
+        if (NOINDEX) {
+          this.emitFile({ type: 'asset', fileName: 'robots.txt', source: 'User-agent: *\nDisallow: /\n' });
+          return;
         }
         const urls = routesMod.routes.filter((r) => r !== '/404/').map((r) => `<url><loc>https://autolimee.ru${r}</loc></url>`).join('');
         this.emitFile({ type: 'asset', fileName: 'sitemap.xml', source: `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls}</urlset>` });

@@ -5,15 +5,15 @@
 const reducedMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 // Seconds in film.mp4: Shanghai, the yard in front of the truck, Moscow-City, the house with the car unloaded.
-const STOPS = [0, 5.125, 18.865, 31.28];
+const STOPS = [0, 5.125, 18.865, 32.9];
 // Headline stage that starts at each of these seconds (0 Shanghai ... 4 handover): the truck leaves at ~9.4,
-// Moscow shows at ~15.5, the truck stops at the house and the unloading starts at ~26.
-const TEXT_AT = [0, 3.2, 9.4, 15.5, 26.0];
+// Moscow shows at ~15.5, the truck stops at the house and the unloading starts at ~26.4.
+const TEXT_AT = [0, 3.2, 9.4, 15.5, 26.4];
 // A chip plays to the stop of its stage ("Transport" and "Customs" both rest in Moscow).
 const CHIP_STOP = [0, 1, 2, 2, 3];
 const LAST = STOPS.length - 1;
 // Playback speed of each leg (yard to Moscow is the longest and runs fastest), a little above the generated speed.
-const LEG_RATE = [1.2, 1.4, 1.3];
+const LEG_RATE = [1.2, 1.4, 1.4];
 const SRC = { phone: '/media/film/film-m.mp4', sd: '/media/film/film-720.mp4', hd: '/media/film/film-1080.mp4' };
 const POSTER = { phone: '/media/film/film-poster-m.jpg', desk: '/media/film/film-poster.jpg' };
 
