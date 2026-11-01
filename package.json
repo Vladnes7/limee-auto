@@ -6,7 +6,7 @@
   "scripts": {
     "data": "node scripts/build-data.mjs",
     "media": "node scripts/build-media.mjs",
-    "dev": "vite --host 127.0.0.1 --port 4310",
+    "dev": "vite --host 0.0.0.0 --port 4310",
     "build": "vite build",
     "preview": "vite preview --host 127.0.0.1 --port 4311"
   },

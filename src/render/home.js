@@ -26,6 +26,7 @@ function hero() {
   <div class="film-track" data-film-track>
     <div class="film-stage">
       <video class="film-video" data-film-video muted playsinline preload="auto" poster="/media/film/film-poster.jpg" aria-hidden="true" tabindex="-1" disablepictureinpicture></video>
+      <video class="film-video film-rev" data-film-rev muted playsinline preload="auto" aria-hidden="true" tabindex="-1" disablepictureinpicture></video>
       <div class="film-shade" aria-hidden="true"></div>
       <div class="film-copy">
         <div class="film-steps">${FILM.map(

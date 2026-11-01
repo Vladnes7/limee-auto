@@ -30,6 +30,16 @@
   backface-visibility: hidden;
 }
 
+/* The same film played backwards, frame-mirrored; shown on top only while the film goes back (js/film.js). */
+.film-rev {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.film-rev.is-on {
+  opacity: 1;
+}
+
 .film-shade {
   position: absolute;
   inset: 0;
