@@ -1,0 +1,352 @@
+/* ---------- legal ---------- */
+.legal {
+  display: flow-root;
+  padding: clamp(40px, 5vw, 72px) var(--pad) clamp(64px, 8vw, 120px);
+  background: var(--milk);
+  color: var(--on-light);
+}
+
+.legal > * {
+  max-width: 960px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.page-legal .page-title {
+  font-size: clamp(30px, 5vw, 72px);
+}
+
+.legal-kicker {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--on-light-2);
+}
+
+.legal h2 {
+  margin-top: 40px;
+  margin-bottom: 12px;
+  font-family: var(--f-display);
+  font-weight: 650;
+  text-transform: uppercase;
+  font-size: clamp(18px, 1.6vw, 22px);
+  line-height: 1.2;
+}
+
+.legal p,
+.legal ul {
+  margin-top: 12px;
+  color: #2c2f28;
+  line-height: 1.7;
+}
+
+.legal ul {
+  display: grid;
+  gap: 8px;
+  padding-left: 20px;
+  list-style: disc;
+}
+
+.legal ul li::marker {
+  color: var(--on-light-2);
+}
+
+.legal strong {
+  color: var(--on-light);
+}
+
+/* ---------- about ---------- */
+.about {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  gap: clamp(28px, 5vw, 80px);
+  padding: clamp(48px, 6vw, 96px) var(--pad);
+  background: var(--milk);
+  color: var(--on-light);
+}
+
+.about-media {
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  align-self: start;
+}
+
+.about-media img {
+  width: 100%;
+}
+
+.about-copy {
+  display: grid;
+  align-content: start;
+  gap: 18px;
+  color: var(--on-light-2);
+  font-size: 17px;
+}
+
+.about-big {
+  font-family: var(--f-display);
+  font-weight: 500;
+  font-size: clamp(19px, 1.8vw, 26px);
+  line-height: 1.35;
+  color: var(--on-light);
+}
+
+.about .number-list {
+  grid-column: 1 / -1;
+  padding-top: 32px;
+  border-top: 1px solid rgba(11, 12, 10, 0.14);
+}
+
+.about-links {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  background: var(--ink);
+}
+
+.about-link {
+  position: relative;
+  display: grid;
+  gap: 10px;
+  padding: clamp(28px, 3vw, 48px) var(--pad);
+  border-right: 1px solid var(--line);
+  transition: background-color 0.3s var(--ease);
+}
+
+.about-link:last-child {
+  border-right: 0;
+}
+
+.about-link-title {
+  font-family: var(--f-display);
+  font-weight: 650;
+  text-transform: uppercase;
+  font-size: clamp(17px, 1.6vw, 22px);
+  line-height: 1.2;
+  max-width: 18ch;
+}
+
+.about-link svg {
+  width: 24px;
+  height: 24px;
+  fill: none;
+  stroke: var(--lime);
+  stroke-width: 2;
+  stroke-linecap: round;
+  transition: transform 0.3s var(--ease);
+}
+
+@media (hover: hover) {
+  .about-link:hover {
+    background: var(--ink-2);
+  }
+
+  .about-link:hover svg {
+    transform: translateX(6px);
+  }
+}
+
+@media (max-width: 900px) {
+  .about,
+  .about-links {
+    grid-template-columns: 1fr;
+  }
+
+  .about-link {
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+}
+
+/* ---------- contacts ---------- */
+.contacts {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  gap: clamp(32px, 6vw, 96px);
+  padding: clamp(48px, 6vw, 96px) var(--pad);
+  background: var(--milk);
+  color: var(--on-light);
+}
+
+.contact-main {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+}
+
+.contact-big {
+  justify-self: start;
+  font-family: var(--f-display);
+  font-weight: 650;
+  font-size: clamp(24px, 3.4vw, 50px);
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  transition: color 0.2s;
+}
+
+.contact-mail {
+  margin-top: 24px;
+  font-size: clamp(19px, 2.6vw, 38px);
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.contact-big:hover {
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 6px;
+}
+
+.contact-note {
+  color: var(--on-light-2);
+}
+
+.contact-addr {
+  display: grid;
+  gap: 8px;
+  justify-items: start;
+  margin-top: 40px;
+  padding-top: 24px;
+  border-top: 1px solid rgba(11, 12, 10, 0.14);
+  font-size: 18px;
+}
+
+.contact-side {
+  display: grid;
+  align-content: start;
+  gap: 16px;
+}
+
+.contact-socials {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.contact-socials a {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 56px;
+  padding: 0 16px;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: inset 0 0 0 1.5px rgba(11, 12, 10, 0.1);
+  font-weight: 700;
+  transition: background-color 0.25s, color 0.25s;
+}
+
+.contact-socials a > svg:last-child {
+  margin-left: auto;
+  width: 16px;
+  height: 16px;
+  opacity: 0.5;
+}
+
+.contact-socials a:hover {
+  background: var(--ink);
+  color: var(--on-dark);
+}
+
+/* Requisites: a full-width card under the contacts, so neither column leaves a hole. */
+.contact-req {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: minmax(0, 280px) minmax(0, 1fr);
+  gap: 24px clamp(24px, 5vw, 80px);
+  padding: clamp(24px, 3vw, 40px);
+  border-radius: var(--r-lg);
+  background: var(--mist);
+}
+
+.contact-req-head {
+  display: grid;
+  align-content: start;
+  justify-items: start;
+  gap: 8px;
+}
+
+.contact-req-name {
+  margin-bottom: 8px;
+  font-family: var(--f-display);
+  font-weight: 650;
+  font-size: clamp(18px, 1.6vw, 22px);
+  line-height: 1.2;
+}
+
+.contact-req dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: clamp(24px, 3vw, 48px);
+}
+
+.contact-req dl > div {
+  display: grid;
+  grid-template-columns: 64px 1fr;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(11, 12, 10, 0.1);
+  font-size: 15px;
+}
+
+.contact-req .contact-req-wide {
+  grid-column: 1 / -1;
+}
+
+.contact-req dt {
+  color: var(--on-light-2);
+}
+
+.contact-req dd {
+  font-variant-numeric: tabular-nums;
+  word-break: break-word;
+}
+
+@media (max-width: 900px) {
+  .contacts,
+  .contact-req {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 560px) {
+  .contact-req dl {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* The request block after a milk section gets its own tone, so the two never merge. */
+.contacts + .lead,
+.catalog + .lead,
+.config + .lead {
+  background: var(--mist);
+}
+
+@media (max-width: 480px) {
+  .contact-socials {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ---------- 404 ---------- */
+.nf {
+  min-height: 90svh;
+  display: grid;
+  align-content: center;
+}
+
+.nf-code {
+  position: relative;
+  font-size: clamp(90px, 18vw, 260px);
+  color: var(--lime);
+  line-height: 0.9;
+}
+
+.nf-actions {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 28px;
+}

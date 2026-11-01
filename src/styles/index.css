@@ -1,0 +1,10 @@
+/* Linked from index.html so styles block the first paint (no unstyled flash between pages). */
+@import '@fontsource-variable/unbounded/index.css';
+@import '@fontsource-variable/manrope/index.css';
+@import '@fontsource/cormorant-garamond/cyrillic-500-italic.css';
+@import '@fontsource/cormorant-garamond/latin-500-italic.css';
+@import './base.css';
+@import './layout.css';
+@import './home.css';
+@import './catalog.css';
+@import './pages.css';
