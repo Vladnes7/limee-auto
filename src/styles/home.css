@@ -4,6 +4,57 @@
   background: #050605;
 }
 
+/* Sky colours of the five stages, sampled from the top of the film frames (used on phones, where the
+   screen above the picture takes the colour of its sky). Registered so they glide from one to the next. */
+@property --sky {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #2f3e61;
+}
+
+@property --sky-deep {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #0c1222;
+}
+
+@property --sky-floor {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #080b12;
+}
+
+.film,
+.film[data-stage='0'] {
+  --sky: #2f3e61; /* Shanghai at night */
+  --sky-deep: #0c1222;
+  --sky-floor: #080b12;
+}
+
+.film[data-stage='1'] {
+  --sky: #0b3a80; /* the yard, blue hour */
+  --sky-deep: #06152e;
+  --sky-floor: #050b18;
+}
+
+.film[data-stage='2'] {
+  --sky: #0f3272; /* above the clouds */
+  --sky-deep: #071331;
+  --sky-floor: #050a18;
+}
+
+.film[data-stage='3'] {
+  --sky: #5a9cdc; /* Moscow, daytime */
+  --sky-deep: #0f2846;
+  --sky-floor: #08121f;
+}
+
+.film[data-stage='4'] {
+  --sky: #857b66; /* the house, warm evening */
+  --sky-deep: #1d1912;
+  --sky-floor: #100e0a;
+}
+
 /* One screen tall. A flick (wheel, swipe, key) plays the next clip by itself; see js/film.js. */
 .film-stage {
   position: relative;
@@ -30,14 +81,74 @@
   backface-visibility: hidden;
 }
 
-/* The same film played backwards, frame-mirrored; shown on top only while the film goes back (js/film.js). */
-.film-rev {
+/* Several film elements take turns (forward, reversed, the in-memory copy): only .is-shown is visible.
+   js/film.js moves the mark only to an element that is already playing, so the picture is never stale. */
+.film-video {
   opacity: 0;
   pointer-events: none;
 }
 
-.film-rev.is-on {
+.film-video.is-shown {
   opacity: 1;
+}
+
+/* Last stop: the car stands at the house. */
+.film-final {
+  position: absolute;
+  z-index: 1;
+  right: var(--pad);
+  bottom: clamp(150px, 21vh, 200px);
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  padding: 8px 18px 8px 8px;
+  border-radius: 999px;
+  background: var(--lime);
+  color: var(--ink);
+  font-family: var(--f-display);
+  font-weight: 650;
+  font-size: 14px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(14px);
+  transition: opacity 0.45s var(--ease), transform 0.7s var(--ease-out), visibility 0s 0.45s;
+}
+
+.film-final.is-on {
+  opacity: 1;
+  visibility: visible;
+  transform: none;
+  transition-delay: 0s;
+}
+
+.film-final-tick {
+  position: relative;
+  flex: none;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--ink);
+}
+
+.film-final-tick::after {
+  content: '';
+  position: absolute;
+  left: 9px;
+  top: 5px;
+  width: 7px;
+  height: 12px;
+  border: solid var(--lime);
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+/* the buttons under the stage chips exist for phones only (see the phone block) */
+.film-actions.film-actions-nav {
+  display: none;
 }
 
 .film-shade {
@@ -300,15 +411,27 @@
     padding-top: calc(var(--header-h) + 12px);
   }
 
-  /* Phone: the whole frame across the screen width (film-m.mp4 keeps 84% of the shot, so the car is
-     never cut at any stage), resting right above the buttons; its wet-road bottom slips under them.
-     The buttons start ~182px above the screen bottom on every phone size. Text is above on black. */
+  /* Phone, bottom up: the buttons, the stage chips, then the picture across the full width
+     (film-m.mp4 keeps 84% of the shot, so the car is never cut). The chips sit on the picture's
+     wet-road edge. Above the picture the screen takes the colour of its sky, so the text no longer
+     sits on an empty black field, and the colour travels with the film (Shanghai night, the blue
+     yard, Moscow day, the warm evening at the house). */
+  .film {
+    --pic-bottom: calc(clamp(18px, 3vh, 32px) + 82px);
+    --pic-h: calc(100vw * 804 / 1200);
+    --pic-top: calc(var(--pic-bottom) + var(--pic-h));
+    transition: --sky 1.2s ease, --sky-deep 1.2s ease, --sky-floor 1.2s ease;
+  }
+
+  .film-stage {
+    background: linear-gradient(180deg, var(--sky-deep) 0%, var(--sky) calc(100% - var(--pic-top) + 2px), var(--sky-floor) calc(100% - var(--pic-top) + 2px));
+  }
+
   .film-video,
   .film-shade {
     top: auto;
-    bottom: 150px;
-    height: auto;
-    aspect-ratio: 1200 / 804;
+    bottom: var(--pic-bottom);
+    height: var(--pic-h);
   }
 
   .film-video {
@@ -316,7 +439,35 @@
   }
 
   .film-shade {
-    background: linear-gradient(180deg, #050605 0%, rgba(5, 6, 5, 0.5) 16%, rgba(5, 6, 5, 0) 36%, rgba(5, 6, 5, 0) 74%, rgba(5, 6, 5, 0.65) 90%, #050605 100%);
+    background: linear-gradient(
+      180deg,
+      var(--sky) 0%,
+      color-mix(in srgb, var(--sky) 45%, transparent) 13%,
+      transparent 32%,
+      transparent 70%,
+      color-mix(in srgb, var(--sky-floor) 70%, transparent) 88%,
+      var(--sky-floor) 100%
+    );
+  }
+
+  .film-final {
+    right: auto;
+    left: var(--pad);
+    bottom: calc(var(--pic-top) - 52px);
+    padding: 6px 14px 6px 6px;
+    font-size: 12px;
+  }
+
+  .film-final-tick {
+    width: 22px;
+    height: 22px;
+  }
+
+  .film-final-tick::after {
+    left: 8px;
+    top: 4px;
+    width: 6px;
+    height: 10px;
   }
 
   .film-title {
@@ -335,21 +486,52 @@
     display: none;
   }
 
-  .film-hint {
-    font-size: 11px;
-    letter-spacing: 0.1em;
+  /* no hint row: the chips say where the film is; "Пропустить" moves onto the picture's corner */
+  .film-nav {
+    position: static;
+  }
+
+  .film-intro {
+    display: contents;
+  }
+
+  .film-hint,
+  .film-progress {
+    display: none;
   }
 
   .film-hint + .film-skip,
   .film-skip {
-    margin-left: auto;
+    position: absolute;
+    z-index: 1;
+    right: var(--pad);
+    bottom: calc(var(--pic-top) - 44px);
+    margin: 0;
+    color: rgba(238, 240, 232, 0.85);
+    text-shadow: 0 1px 8px rgba(5, 6, 5, 0.7);
+    transition: opacity 0.4s var(--ease), visibility 0s;
+  }
+
+  /* short phones (SE): the first lead reaches down to the picture, keep the link clear of it */
+  @media (max-height: 700px) {
+    .film-hint + .film-skip,
+    .film-skip {
+      bottom: calc(var(--pic-top) - 84px);
+    }
+  }
+
+  /* at the house the final line takes that corner; the page simply scrolls on from here */
+  .film.is-end .film-skip {
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s var(--ease), visibility 0s 0.3s;
   }
 
   .film-eyebrow {
     margin-bottom: 12px;
   }
 
-  /* the stage text fills the free area so the buttons sit right above the chips */
+  /* the stage text stays at the top; the buttons live under the chips */
   .film-copy {
     align-self: stretch;
     display: grid;
@@ -364,9 +546,13 @@
     flex-direction: column;
   }
 
-  .film-actions {
-    margin: auto 0 0;
-    padding-top: 12px;
+  .film-step .film-actions {
+    display: none;
+  }
+
+  .film-actions.film-actions-nav {
+    display: flex;
+    margin: 0;
     gap: 8px;
   }
 
@@ -406,6 +592,30 @@
 
   .film-chips li {
     position: relative;
+    z-index: 1;
+  }
+
+  /* the line between the steps fills with lime as the car travels (replaces the progress bar) */
+  .film-chips::before,
+  .film-chips::after {
+    left: 22px;
+    right: 22px;
+    z-index: 0;
+  }
+
+  .film-chips::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    height: 2px;
+    margin-top: -1px;
+    background: var(--lime);
+    transform-origin: left;
+    transform: scaleX(var(--film-p, 0));
+  }
+
+  .film-progress {
+    display: none;
   }
 
   .film-chip {

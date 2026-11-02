@@ -65,6 +65,7 @@ export function intro(onDone) {
     .to(loader.querySelector('.loader-outline'), { scale: 1.04, duration: 0.5, ease: 'power1.out' }, 1.3)
     .add(onDone, 1.55)
     .to(loader, { clipPath: 'inset(0 0 100% 0)', duration: 0.9, ease: 'expo.inOut' }, 1.55);
+  tl.timeScale(1.45); // the whole intro in ~1.7 s instead of 2.45 s
   gsap.set(loader.querySelector('.loader-wordmark'), { y: 14 });
   gsap.set(loader, { clipPath: 'inset(0 0 0% 0)' });
 }

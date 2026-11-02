@@ -3,6 +3,11 @@
 // The film is one video; STOPS are the moments it rests on, TEXT_AT says which headline shows when.
 // Going back plays a second, frame-mirrored file (…-rev.mp4) forwards: real playback, not seeking.
 // Both files are downloaded whole into memory (blob) so playback never waits for the network.
+//
+// Several <video> elements take turns on screen (forward, reversed, the in-memory forward copy). The rule
+// that keeps iPhone right: an element is uncovered only once it is PLAYING and has put a frame on screen.
+// iOS Safari does not reliably repaint a paused video after a seek, so a seek alone never decides what
+// is shown — that is how an old frame (Moscow) used to appear and stay frozen on the way back.
 
 const reducedMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -11,6 +16,8 @@ const STOPS = [0, 5.125, 18.865, 32.9];
 // Headline stage that starts at each of these seconds (0 Shanghai ... 4 handover): the truck leaves at ~9.4,
 // Moscow shows at ~15.5, the truck stops at the house and the unloading starts at ~26.4.
 const TEXT_AT = [0, 3.2, 9.4, 15.5, 26.4];
+// The car stands on its wheels at the house from here on: "Автомобиль уже у вас дома" shows.
+const FINAL_AT = 31.6;
 // A chip plays to the stop of its stage ("Transport" and "Customs" both rest in Moscow).
 const CHIP_STOP = [0, 1, 2, 2, 3];
 const LAST = STOPS.length - 1;
@@ -36,24 +43,44 @@ const stageAt = (t) => TEXT_AT.reduce((s, at, k) => (t >= at - 0.001 ? k : s), 0
 const frameOf = (t) => Math.min(END_FRAME, Math.max(0, Math.floor(t * FPS + 0.001)));
 const mid = (f) => (f + 0.5) / FPS; // a time safely inside frame f
 const mirror = (t) => mid(END_FRAME - frameOf(t)); // the same picture in the other file
+// how far along the five stage chips the film is, 0…1 (the line between them fills up to the active one)
+const along = (t) => {
+  const s = stageAt(t);
+  if (s >= TEXT_AT.length - 1) return 1;
+  return (s + (t - TEXT_AT[s]) / (TEXT_AT[s + 1] - TEXT_AT[s])) / (TEXT_AT.length - 1);
+};
 
-// Resolves once a seek has landed and its frame is on screen.
-function seekTo(el, t) {
+// Plays `el` from `t` and resolves true once it is playing with a frame on screen (false if it will not).
+function playFrom(el, t, rate) {
   return new Promise((resolve) => {
     let done = false;
-    const end = () => {
+    const end = (ok) => {
       if (done) return;
       done = true;
-      resolve();
+      clearTimeout(timer);
+      resolve(ok);
     };
-    const painted = () => {
-      if (el.requestVideoFrameCallback) el.requestVideoFrameCallback(() => end());
-      requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(end, 40)));
+    const timer = setTimeout(() => end(!el.paused && el.currentTime > t), 2000);
+    const start = () => {
+      el.playbackRate = rate;
+      Promise.resolve(el.play())
+        .then(() => {
+          const painted = () => end(true);
+          if (el.requestVideoFrameCallback) el.requestVideoFrameCallback(painted);
+          const poll = () => {
+            if (done) return;
+            if (el.currentTime > t + 0.4 / FPS) requestAnimationFrame(painted);
+            else requestAnimationFrame(poll);
+          };
+          requestAnimationFrame(poll);
+        })
+        .catch(() => end(false));
     };
-    if (!el.seeking && Math.abs(el.currentTime - t) < 0.5 / FPS) return painted();
-    el.addEventListener('seeked', painted, { once: true });
-    el.currentTime = t;
-    setTimeout(end, 1200); // never wait forever
+    if (!el.seeking && Math.abs(el.currentTime - t) < 0.5 / FPS) start();
+    else {
+      el.addEventListener('seeked', start, { once: true });
+      el.currentTime = t;
+    }
   });
 }
 
@@ -66,16 +93,18 @@ function fetchBlob(url) {
 
 export function film() {
   const root = document.querySelector('[data-film]');
-  let video = root?.querySelector('[data-film-video]');
-  const rev = root?.querySelector('[data-film-rev]');
+  let video = root?.querySelector('[data-film-video]'); // the forward film
+  const rev = root?.querySelector('[data-film-rev]'); // the same film reversed
   if (!root || !video) return;
 
   const steps = [...root.querySelectorAll('[data-film-step]')];
   const chips = [...root.querySelectorAll('[data-film-chip]')];
+  const chipList = root.querySelector('.film-chips');
   const bar = root.querySelector('[data-film-bar]');
   const hint = root.querySelector('[data-film-hint]');
   const facts = root.querySelector('[data-film-facts]');
   const skip = root.querySelector('[data-film-skip]');
+  const final = root.querySelector('[data-film-final]');
 
   // ?debug=1 in the address: a small log on screen of what the film does (for checking on a real phone).
   const debug = /[?&]debug=1\b/.test(location.search);
@@ -91,6 +120,7 @@ export function film() {
     const line = `${(performance.now() / 1000).toFixed(1)}s  ${msg}`;
     logBox.textContent = [line, ...logBox.textContent.split('\n')].slice(0, 12).join('\n');
   };
+  const nameOf = (el) => (el === rev ? 'reversed' : el === video ? 'forward' : 'forward (memory)');
 
   const still = reducedMotion(); // no travelling video: stops are reached by an instant cut
   const phone = matchMedia('(max-width: 760px)').matches;
@@ -98,11 +128,14 @@ export function film() {
   const lean = Boolean(conn.saveData) || /(^|-)[23]g$/.test(conn.effectiveType || '');
 
   video.poster = phone ? POSTER.phone : POSTER.desk;
-  // Phone: the element only reads the header; the whole file comes in as a blob (below) and replaces it.
+  // Phone: the element only reads the header; the whole file comes in as a blob (below) and takes over.
   if (phone && !lean) video.preload = 'metadata';
   video.src = phone ? SRC.phone : SRC.sd;
   root.classList.add('is-live');
 
+  let shown = video; // the element on screen
+  let next = null; // the forward film from memory, waiting to take over at the next forward move
+  let handing = null; // element being started for a handoff
   let idx = 0; // stop the film rests on
   let moving = false;
   let leg = 0; // id of the current move, so late async callbacks of an old move do nothing
@@ -112,10 +145,8 @@ export function film() {
   let base = 1.2; // speed of the current leg
   let quick = false;
   let raf = 0;
-  let pendingHD = null;
   let stage = -1;
   let revReady = false;
-  let revOn = false; // the reversed file is the one on screen
   // seek-driven travel (backwards before the reversed file is in, or when the player refuses to play)
   let seekMode = false;
   let seekFrom = 0;
@@ -133,6 +164,7 @@ export function film() {
   function showStage(s) {
     if (s === stage) return;
     stage = s;
+    root.dataset.stage = s; // phone: the sky colour above the picture follows the stage
     steps.forEach((el, k) => {
       el.classList.toggle('is-active', k === s);
       el.classList.toggle('is-past', k < s);
@@ -143,9 +175,8 @@ export function film() {
       if (k === s) el.setAttribute('aria-current', 'step');
       else el.removeAttribute('aria-current');
     });
-    const list = chips[s]?.closest('.film-chips');
-    if (list && list.scrollWidth > list.clientWidth) {
-      list.scrollTo({ left: chips[s].offsetLeft - (list.clientWidth - chips[s].offsetWidth) / 2, behavior: 'smooth' });
+    if (chipList && chipList.scrollWidth > chipList.clientWidth + 1) {
+      chipList.scrollTo({ left: chips[s].offsetLeft - (chipList.clientWidth - chips[s].offsetWidth) / 2, behavior: 'smooth' });
     }
   }
 
@@ -159,62 +190,80 @@ export function film() {
     facts?.classList.toggle('is-gone', idx > 0 || moving);
   }
 
-  // film time currently on screen
-  const filmTime = () => (revOn ? mid(END_FRAME - frameOf(rev.currentTime)) : video.currentTime);
+  // film time of the picture on screen
+  const filmTime = () => (shown === rev ? mid(END_FRAME - frameOf(rev.currentTime)) : shown.currentTime);
 
   function sync(t = filmTime()) {
     showStage(stageAt(t));
     if (bar) bar.style.transform = `scaleX(${Math.min(1, t / STOPS[LAST])})`;
+    chipList?.style.setProperty('--film-p', along(t).toFixed(4));
+    final?.classList.toggle('is-on', t >= FINAL_AT);
+    root.classList.toggle('is-end', t >= FINAL_AT);
   }
 
-  function showRev(on) {
-    revOn = on;
-    rev?.classList.toggle('is-on', on);
+  // uncover `el` (it is already playing with the right picture) and stop the one it replaces
+  function show(el) {
+    if (el === shown) return;
+    el.classList.add('is-shown');
+    shown.classList.remove('is-shown');
+    shown.pause();
+    shown = el;
+  }
+
+  // the in-memory forward film has taken over: the streaming element goes
+  function adoptNext() {
+    const old = video;
+    video = next;
+    next = null;
+    video.poster = old.poster;
+    old.remove();
+    log('forward film now plays from memory');
   }
 
   function rest() {
-    log(`rest at stop ${idx + 1}/${LAST + 1} (t ${STOPS[idx]})`);
+    log(`rest at stop ${idx + 1}/${LAST + 1} (t ${filmTime().toFixed(2)}, on ${nameOf(shown)})`);
     moving = false;
     restAt = performance.now();
     sync(STOPS[idx]);
     setHint();
-    if (pendingHD) applyHD();
   }
 
+  // instant cut to a stop (reduced motion, skip, page scrolled away)
   function snap(i) {
     cancelAnimationFrame(raf);
     leg++;
-    video.pause();
-    rev?.pause();
-    showRev(false);
     seekMode = false;
+    handing = null;
     idx = i;
-    video.currentTime = STOPS[i];
+    shown.pause();
+    if (shown === rev) rev.currentTime = mirror(STOPS[i]);
+    else shown.currentTime = STOPS[i];
     rest();
   }
 
   // ---------- travelling between stops ----------
   function finish() {
     cancelAnimationFrame(raf);
-    video.pause();
     idx = to;
-    seekMode = false;
-    if (!revOn) {
+    if (seekMode) {
+      seekMode = false;
       video.currentTime = dest;
-      return rest();
     }
-    // Back on the forward file: put it on the same picture first, then uncover it.
-    rev.pause();
-    const id = leg;
-    seekTo(video, dest).then(() => {
-      if (id !== leg) return;
-      showRev(false);
-      rest();
-    });
+    // the element stays where it stopped, on screen: no seek, nothing to repaint
+    shown.pause();
+    rest();
   }
 
   function beginSeek(now) {
-    if (dir > 0) log(`player stalled: driving by seeking (ready ${video.readyState}, play failed ${playFailed})`);
+    log(`driving by seeking (ready ${video.readyState}, play failed ${playFailed})`);
+    if (shown !== video) {
+      const t = filmTime();
+      shown.pause();
+      video.currentTime = t;
+      video.classList.add('is-shown');
+      shown.classList.remove('is-shown');
+      shown = video;
+    }
     seekMode = true;
     seekFrom = video.currentTime;
     seekT0 = now;
@@ -241,23 +290,12 @@ export function film() {
   }
 
   function loop(now) {
-    if (revOn) {
-      const target = mirror(dest);
-      const remaining = target - rev.currentTime;
-      if (remaining <= 0.03 || rev.ended) return finish();
-      rev.playbackRate = rateFor(remaining, true);
-      if (watch(rev, now) || playFailed) {
-        // the reversed file will not play: fall back to seeking the forward one from the same picture
-        rev.pause();
-        video.currentTime = filmTime();
-        showRev(false);
-        beginSeek(now);
-      }
-    } else if (!seekMode && dir > 0) {
-      const remaining = dest - video.currentTime;
-      if (remaining <= 0.03 || video.ended) return finish();
-      video.playbackRate = rateFor(remaining, false);
-      if (playFailed || watch(video, now)) beginSeek(now); // the player is not moving: drive the film by seeking
+    if (!seekMode) {
+      const back = shown === rev;
+      const remaining = back ? mirror(dest) - rev.currentTime : dest - shown.currentTime;
+      if (remaining <= 0.03 || shown.ended) return finish();
+      shown.playbackRate = rateFor(remaining, back);
+      if (playFailed || watch(shown, now)) beginSeek(now); // the player is not moving: drive the film by seeking
     }
     if (seekMode) {
       const p = Math.min(1, (now - seekT0) / seekSpan);
@@ -267,56 +305,87 @@ export function film() {
     }
     lastNow = now;
     if (now > deadline) {
-      log('deadline: jump to the stop');
+      log('deadline: stop here');
       return finish(); // never stay locked
     }
     sync();
     raf = requestAnimationFrame(loop);
   }
 
-  function go(next, fast = false) {
-    if (moving || next === idx || next < 0 || next > LAST) return;
-    if (still) return snap(next);
-    log(`go ${idx + 1} → ${next + 1}${fast ? ' fast' : ''}${next < idx ? (revReady ? ' (reversed film)' : ' (seeking)') : ''}, src ${video.currentSrc.slice(0, 5)}`);
+  function startLoop() {
+    lastTime = shown.currentTime;
+    lastMove = performance.now();
+    lastNow = lastMove;
+    raf = requestAnimationFrame(loop);
+  }
+
+  // start `el` from `t` behind the picture; uncover it once it plays, then travel
+  function handoff(el, t, rate, id) {
+    handing = el;
+    playFrom(el, t, rate).then((ok) => {
+      if (handing === el) handing = null;
+      if (id !== leg) {
+        if (el !== shown) el.pause();
+        return;
+      }
+      if (!ok) {
+        log(`${nameOf(el)} film would not start`);
+        el.pause();
+        if (el === next) {
+          next.remove();
+          next = null;
+        }
+        playFailed = true;
+        beginSeek(performance.now()); // drive the forward film by seeking from the picture on screen
+        startLoop();
+        return;
+      }
+      if (el === next) adoptNext();
+      show(el);
+      startLoop();
+    });
+  }
+
+  function go(target, fast = false) {
+    if (moving || target === idx || target < 0 || target > LAST) return;
+    if (still) return snap(target);
     moving = true;
     const id = ++leg;
-    to = next;
-    dir = next > idx ? 1 : -1;
-    dest = STOPS[next];
-    base = LEG_RATE[Math.min(idx, next)];
+    to = target;
+    dir = target > idx ? 1 : -1;
+    dest = STOPS[target];
+    base = LEG_RATE[Math.min(idx, target)];
     quick = fast;
     playFailed = false;
     seekMode = false;
     const now = performance.now();
-    lastNow = now;
-    lastMove = now;
-    deadline = now + (Math.abs(dest - STOPS[idx]) / base) * 1000 * 2 + 3000;
+    deadline = now + (Math.abs(dest - STOPS[idx]) / base) * 1000 * 2 + 3500;
     setHint();
+    const from = filmTime();
 
     if (dir < 0 && revReady) {
-      // put the reversed file on the picture that is showing, uncover it, play it
-      const from = video.currentTime;
-      video.pause();
-      rev.playbackRate = rateFor(9, true);
-      seekTo(rev, mirror(from)).then(() => {
-        if (id !== leg) return;
-        showRev(true);
-        lastTime = rev.currentTime;
-        lastMove = performance.now();
+      log(`go ${idx + 1} → ${target + 1} back on the reversed film`);
+      if (shown === rev) {
+        rev.playbackRate = rateFor(9, true);
         rev.play().catch(() => (playFailed = true));
-        raf = requestAnimationFrame(loop);
-      });
-      return;
+        return startLoop();
+      }
+      return handoff(rev, mirror(from), rateFor(9, true), id);
     }
     if (dir < 0) {
+      log(`go ${idx + 1} → ${target + 1} back by seeking (reversed film not in yet)`);
       beginSeek(now);
-    } else {
-      if (Math.abs(video.currentTime - STOPS[idx]) > 0.05) video.currentTime = STOPS[idx];
-      video.playbackRate = base * (quick ? QUICK : 1);
-      video.play().catch(() => (playFailed = true));
-      lastTime = video.currentTime;
+      return startLoop();
     }
-    raf = requestAnimationFrame(loop);
+    const player = next || video; // the in-memory copy takes over at the first forward move it can
+    log(`go ${idx + 1} → ${target + 1}${fast ? ' fast' : ''} on ${nameOf(player)}`);
+    const rate = base * (quick ? QUICK : 1);
+    if (player === shown) {
+      shown.playbackRate = rate;
+      shown.play().catch(() => (playFailed = true));
+      return startLoop();
+    }
+    handoff(player, mid(frameOf(from)), rate, id);
   }
 
   // ---------- input: wheel, touch, keys ----------
@@ -387,14 +456,15 @@ export function film() {
   let touchLock = false;
   let touchTravel = 0; // how far the finger went: a swipe that starts on a chip is not a tap on it
   let lastTouchEnd = 0;
-  // iOS plays an inline video most reliably once a touch has started it: prime each element once.
+  // iOS starts a video most reliably after a touch has started it once: prime each hidden element once.
+  // Never the one on screen or the one being started, so priming cannot move the picture.
   const prime = (el) => {
-    if (!el || el.dataset.primed || !el.currentSrc || moving) return;
+    if (!el || el.dataset.primed || !el.currentSrc || el === shown || el === handing || moving) return;
     el.dataset.primed = '1';
     const t = el.currentTime;
-    el.play()
+    Promise.resolve(el.play())
       .then(() => {
-        if (moving && (el === video || revOn)) return;
+        if (el === shown || el === handing) return;
         el.pause();
         el.currentTime = t;
       })
@@ -411,6 +481,7 @@ export function film() {
       touchLock = !loading() && scrollY <= 1 && idx < LAST && !blocked();
       prime(video);
       prime(rev);
+      prime(next);
     },
     { passive: true },
   );
@@ -489,38 +560,31 @@ export function film() {
     scrollTo({ top: root.getBoundingClientRect().height, behavior: still ? 'auto' : 'smooth' });
   });
 
-  // ---------- files: swap in the whole film from memory, then load the reversed one ----------
-  function applyHD() {
-    const url = pendingHD;
-    if (!url || moving) return;
-    pendingHD = null;
-    const next = video.cloneNode(false);
-    next.removeAttribute('src');
-    delete next.dataset.primed;
-    next.muted = true;
-    next.playsInline = true;
-    next.preload = 'auto';
-    next.addEventListener(
+  // ---------- files: the whole film in memory takes over, then the reversed one comes in ----------
+  function prepareNext(url) {
+    const el = video.cloneNode(false);
+    el.removeAttribute('src');
+    el.removeAttribute('poster');
+    el.classList.remove('is-shown');
+    delete el.dataset.primed;
+    el.muted = true;
+    el.playsInline = true;
+    el.preload = 'auto';
+    el.addEventListener(
       'loadeddata',
       () => {
-        seekTo(next, video.currentTime).then(() => {
-          if (moving) {
-            pendingHD = url; // try again when the film rests
-            return;
-          }
-          video.replaceWith(next);
-          video = next;
-          log('film in memory');
-        });
+        next = el;
+        log('forward film in memory');
       },
       { once: true },
     );
-    next.src = url;
+    el.src = url;
+    video.after(el);
   }
 
   function loadRev(src) {
-    if (!rev || still) return Promise.resolve();
-    return fetchBlob(src).then((url) => {
+    if (!rev || still) return;
+    fetchBlob(src).then((url) => {
       if (!url) return;
       rev.addEventListener(
         'loadeddata',
@@ -537,10 +601,7 @@ export function film() {
   function upgrade() {
     if (lean || still) return;
     fetchBlob(phone ? SRC.phone : SRC.hd).then((url) => {
-      if (url) {
-        pendingHD = url;
-        if (!moving) applyHD();
-      }
+      if (url) prepareNext(url);
       loadRev(phone ? SRC.phoneRev : SRC.hdRev);
     });
   }

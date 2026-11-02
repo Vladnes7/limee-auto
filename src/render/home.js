@@ -25,9 +25,10 @@ function hero() {
   return `<section class="film" data-film aria-label="Путь автомобиля: от выбора до ключей">
   <div class="film-track" data-film-track>
     <div class="film-stage">
-      <video class="film-video" data-film-video muted playsinline preload="auto" poster="/media/film/film-poster.jpg" aria-hidden="true" tabindex="-1" disablepictureinpicture></video>
+      <video class="film-video is-shown" data-film-video muted playsinline preload="auto" poster="/media/film/film-poster.jpg" aria-hidden="true" tabindex="-1" disablepictureinpicture></video>
       <video class="film-video film-rev" data-film-rev muted playsinline preload="auto" aria-hidden="true" tabindex="-1" disablepictureinpicture></video>
       <div class="film-shade" aria-hidden="true"></div>
+      <p class="film-final" data-film-final><span class="film-final-tick" aria-hidden="true"></span>Автомобиль уже у вас дома</p>
       <div class="film-copy">
         <div class="film-steps">${FILM.map(
           (s, i) => `<div class="film-step${i === 0 ? ' is-active' : ''}" data-film-step>
@@ -55,6 +56,10 @@ function hero() {
           (s, i) => `<li><button class="film-chip${i === 0 ? ' is-active' : ''}" type="button" data-film-chip="${i}"><span class="film-chip-num">${i + 1}</span><span class="film-chip-text">${s.chip}</span></button></li>`,
         ).join('')}</ol>
         <div class="film-progress" aria-hidden="true"><i data-film-bar></i></div>
+        <div class="film-actions film-actions-nav">
+          <button class="btn btn-lime" type="button" data-open-lead>Консультация</button>
+          <a class="btn btn-ghost" href="/catalog/">Каталог автомобилей</a>
+        </div>
       </div>
     </div>
   </div>

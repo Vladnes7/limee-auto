@@ -314,7 +314,8 @@
   z-index: 100;
   display: grid;
   place-items: center;
-  background: #000;
+  /* the night blue of the first film frame, so the curtain opens into the film, not a black flash */
+  background: #0c1222;
   color: var(--on-dark);
 }
 
