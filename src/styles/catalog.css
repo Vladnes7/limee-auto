@@ -291,7 +291,7 @@
   }
 
   .car-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
@@ -729,7 +729,7 @@
 
 @media (max-width: 960px) {
   .config {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .calc {

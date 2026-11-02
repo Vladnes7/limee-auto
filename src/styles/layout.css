@@ -674,11 +674,11 @@
 
 @media (max-width: 900px) {
   .lead {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .lead-points li {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
@@ -929,7 +929,7 @@
 
 @media (max-width: 900px) {
   .footer-cols {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .footer-cta {

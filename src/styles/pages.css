@@ -149,7 +149,7 @@
 @media (max-width: 900px) {
   .about,
   .about-links {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .about-link {
@@ -306,13 +306,13 @@
 @media (max-width: 900px) {
   .contacts,
   .contact-req {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
 @media (max-width: 560px) {
   .contact-req dl {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
@@ -325,7 +325,7 @@
 
 @media (max-width: 480px) {
   .contact-socials {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 

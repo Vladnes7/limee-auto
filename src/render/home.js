@@ -235,7 +235,7 @@ function steps() {
   <ol class="step-list">${STEPS.map(
     (s, i) => `<li class="step" data-step>
       <figure class="step-media">
-        <img src="/media/site/${s.img}-${s.img === 'step-4' ? 535 : 848}.webp" ${s.img === 'step-4' ? '' : `srcset="/media/site/${s.img}-480.webp 480w, /media/site/${s.img}-848.webp 848w" sizes="(max-width: 760px) 90vw, 420px"`} width="${s.img === 'step-4' ? 535 : 848}" height="${s.img === 'step-4' ? 749 : s.img === 'step-2' ? 1264 : 1187}" alt="" loading="lazy" decoding="async">
+        <img src="/media/site/${s.img}-${s.img === 'step-4' ? 535 : 848}.webp" ${s.img === 'step-4' ? '' : `srcset="/media/site/${s.img}-480.webp 480w, /media/site/${s.img}-848.webp 848w" sizes="(max-width: 760px) 90vw, 420px"`} width="${s.img === 'step-4' ? 535 : 848}" height="${s.img === 'step-4' ? 749 : s.img === 'step-2' ? 1264 : 1187}" alt="" fetchpriority="low" decoding="async">
         <span class="step-num" aria-hidden="true">${i + 1}</span>
       </figure>
       <div class="step-body">

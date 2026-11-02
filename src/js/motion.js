@@ -175,7 +175,7 @@ export function delivery() {
     trigger: sec,
     start: 'top top',
     end: 'bottom bottom',
-    scrub: 0.6,
+    scrub: 0.15, // the route follows the scroll at once (0.6 trailed behind and felt like waiting)
     onUpdate: (self) => place(gsap.utils.clamp(0, 1, (self.progress - 0.08) / 0.84)),
   });
   gsap.from(sec.querySelector('.map'), { opacity: 0, scale: 0.94, duration: 1.2, ease: EASE, scrollTrigger: { trigger: sec, start: 'top 70%' } });

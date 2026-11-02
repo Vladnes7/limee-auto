@@ -705,7 +705,7 @@
 
 @media (max-width: 560px) {
   .promise-list {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     gap: 0;
   }
 
@@ -1223,7 +1223,7 @@
 
 @media (max-width: 640px) {
   .reason-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
@@ -1389,7 +1389,7 @@
 @media (max-width: 860px) {
   .step,
   .step:nth-child(even) {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .step:nth-child(even) .step-media {
@@ -1402,8 +1402,10 @@
 }
 
 /* ---------- delivery map ---------- */
+/* The map holds the screen while the route draws. It used to hold it for almost two screens of
+   scrolling with the drawing trailing behind, which read as the page getting stuck; now about one. */
 .delivery {
-  height: 280vh;
+  height: 200vh;
   background: var(--ink);
 }
 
@@ -1613,11 +1615,11 @@
 
 @media (max-width: 960px) {
   .delivery {
-    height: 230vh;
+    height: 180vh;
   }
 
   .delivery-sticky {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     grid-template-rows: auto 1fr auto auto;
     padding-top: calc(var(--header-h) + 16px);
   }
@@ -1645,7 +1647,7 @@
 
   .stage-list {
     grid-row: 3;
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     gap: 6px;
   }
 
@@ -1800,7 +1802,7 @@
 
 @media (max-width: 900px) {
   .checks-head {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .checks-img {
@@ -1811,7 +1813,7 @@
   }
 
   .check-cols {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .review::before {

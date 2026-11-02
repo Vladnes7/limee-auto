@@ -32,6 +32,7 @@ const SRC = {
   phone: '/media/film/film-m.mp4',
   phoneRev: '/media/film/film-m-rev.mp4',
   sd: '/media/film/film-720.mp4',
+  sdRev: '/media/film/film-720-rev.mp4',
   hd: '/media/film/film-1080.mp4',
   hdRev: '/media/film/film-1080-rev.mp4',
 };
@@ -84,10 +85,12 @@ function playFrom(el, t, rate) {
   });
 }
 
+// Downloads a file whole into memory; resolves { url, mbps } (the speed the line gave) or null.
 function fetchBlob(url) {
-  return fetch(url)
+  const t0 = performance.now();
+  return fetch(url, { priority: 'low' })
     .then((r) => (r.ok ? r.blob() : null))
-    .then((b) => (b ? URL.createObjectURL(b) : null))
+    .then((b) => (b ? { url: URL.createObjectURL(b), mbps: (b.size * 8) / 1e6 / Math.max(0.05, (performance.now() - t0) / 1000) } : null))
     .catch(() => null);
 }
 
@@ -147,6 +150,7 @@ export function film() {
   let raf = 0;
   let stage = -1;
   let revReady = false;
+  let pendingRev = null; // a better reversed file, waiting until the reversed element is off screen
   // seek-driven travel (backwards before the reversed file is in, or when the player refuses to play)
   let seekMode = false;
   let seekFrom = 0;
@@ -226,6 +230,7 @@ export function film() {
     restAt = performance.now();
     sync(STOPS[idx]);
     setHint();
+    if (pendingRev) useRev(pendingRev);
   }
 
   // instant cut to a stop (reduced motion, skip, page scrolled away)
@@ -386,6 +391,27 @@ export function film() {
       return startLoop();
     }
     handoff(player, mid(frameOf(from)), rate, id);
+  }
+
+  // A chip pressed while the film travels: stop where it is and head for that stop instead.
+  function redirect(target) {
+    cancelAnimationFrame(raf);
+    leg++;
+    handing = null;
+    if (seekMode) seekMode = false;
+    shown.pause();
+    moving = false;
+    const t = filmTime();
+    if (Math.abs(t - STOPS[target]) < 0.05) {
+      idx = target;
+      return rest();
+    }
+    // the stop just behind the picture, seen from the direction of travel
+    if (STOPS[target] > t) idx = STOPS.reduce((k, s, i) => (s <= t ? i : k), 0);
+    else idx = STOPS.findIndex((s) => s >= t);
+    if (idx === target) idx += STOPS[target] > t ? -1 : 1;
+    log(`redirect at t ${t.toFixed(2)} to stop ${target + 1}`);
+    go(target, Math.abs(target - idx) > 1);
   }
 
   // ---------- input: wheel, touch, keys ----------
@@ -549,6 +575,7 @@ export function film() {
       if (performance.now() - lastTouchEnd < 600 && touchTravel > 6) return log(`chip ${i + 1} ignored: swipe`);
       log(`chip ${i + 1} tapped`);
       const stop = CHIP_STOP[i];
+      if (moving) return redirect(stop);
       if (stop === idx) return;
       go(stop, Math.abs(stop - idx) > 1);
     });
@@ -582,27 +609,60 @@ export function film() {
     video.after(el);
   }
 
-  function loadRev(src) {
-    if (!rev || still) return;
-    fetchBlob(src).then((url) => {
-      if (!url) return;
-      rev.addEventListener(
-        'loadeddata',
-        () => {
-          revReady = true;
-          log('reversed film in memory');
-        },
-        { once: true },
-      );
-      rev.src = url;
-    });
+  // put a reversed file in; never while the reversed element is on screen or about to be
+  function useRev(url) {
+    if (shown === rev || handing === rev || moving) {
+      pendingRev = url;
+      return;
+    }
+    pendingRev = null;
+    revReady = false;
+    rev.addEventListener(
+      'loadeddata',
+      () => {
+        revReady = true;
+        log('reversed film in memory');
+      },
+      { once: true },
+    );
+    rev.src = url;
   }
 
+  const filmInView = () => root.getBoundingClientRect().bottom > 0;
+  const whenFilmInView = (fn) => {
+    if (filmInView()) return fn();
+    const io = new IntersectionObserver((en) => {
+      if (!en[0].isIntersecting) return;
+      io.disconnect();
+      fn();
+    });
+    io.observe(root);
+  };
+
   function upgrade() {
-    if (lean || still) return;
-    fetchBlob(phone ? SRC.phone : SRC.hd).then((url) => {
-      if (url) prepareNext(url);
-      loadRev(phone ? SRC.phoneRev : SRC.hdRev);
+    if (lean || still || !rev) return;
+    if (phone) {
+      fetchBlob(SRC.phone).then((f) => {
+        if (f) prepareNext(f.url);
+        fetchBlob(SRC.phoneRev).then((r) => r && useRev(r.url));
+      });
+      return;
+    }
+    // Desktop: the reversed 720p film first (14 MB). The 1080p pair (78 MB) only on a fast line, judged
+    // by how quickly that download came in, and only while the film is on screen: on an ordinary line
+    // it would take the bandwidth the photos further down the page need, and the page felt slow.
+    fetchBlob(SRC.sdRev).then((r) => {
+      if (!r) return;
+      useRev(r.url);
+      log(`line ~${r.mbps.toFixed(0)} Mbit/s`);
+      if (r.mbps < 25) return;
+      whenFilmInView(() =>
+        fetchBlob(SRC.hd).then((f) => {
+          if (!f) return;
+          prepareNext(f.url);
+          fetchBlob(SRC.hdRev).then((h) => h && useRev(h.url));
+        }),
+      );
     });
   }
   // Phone: the film is the whole first screen, fetch it at once. Desktop: the 720p file streams fine,
