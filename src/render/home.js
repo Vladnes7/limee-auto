@@ -4,6 +4,11 @@ import { brandTrack, leadSection } from './layout.js';
 import map from '../data/map.json' with { type: 'json' };
 import allBrands from '../data/all-brands.json' with { type: 'json' };
 
+// Two versions of the first screen, chosen at build time: the scroll film (default) or the photo of a
+// Bentley Continental used before the film (build with HERO=photo, see server/deploy-b.sh).
+const PHOTO_HERO = process.env.HERO === 'photo';
+const HERO = 'bentley-continental-plug-in-hybrid';
+
 const FAN =['lotus-emira', 'xiaomi-su7-ultra', 'porsche-911', 'lixiang-ideal-l9', 'mercedes-benz-g-class-amg', 'zeekr-jikrypton-7x', 'land-rover-defender'];
 
 // The first screen is a short film: one car travels from the choice in China to the keys at the
@@ -21,7 +26,7 @@ const FILM = [
   { chip: 'Вручение автомобиля', title: 'Передаём<br><em>ключи</em>', lead: 'Проверенный автомобиль и полная прозрачность' },
 ];
 
-function hero() {
+function filmHero() {
   return `<section class="film" data-film aria-label="Путь автомобиля: от выбора до ключей">
   <div class="film-track" data-film-track>
     <div class="film-stage">
@@ -64,6 +69,37 @@ function hero() {
     </div>
   </div>
 </section>`;
+}
+
+function photoHero() {
+  const p = bySlug.get(HERO);
+  return `<section class="hero" data-hero aria-labelledby="hero-title">
+  <div class="hero-media" data-hero-media>${carImage(p, 1, { sizes: '100vw', eager: true, cls: 'hero-img', alt: '' })}</div>
+  <div class="hero-shade" aria-hidden="true"></div>
+  <div class="hero-lines contours" aria-hidden="true"></div>
+  <div class="hero-content">
+    <h1 class="display hero-title" id="hero-title">
+      <span class="line"><span>Сервис безопасных</span></span>
+      <span class="line"><span>покупок <em>автомобилей</em></span></span>
+      <span class="line"><span>за границей</span></span>
+    </h1>
+    <p class="hero-lead" data-hero-fade>Купите автомобиль мечты напрямую из-за рубежа без рисков переплат и скрытых комиссий с помощью безопасной сделки от Сбера</p>
+    <div class="hero-actions" data-hero-fade>
+      <button class="btn btn-lime" type="button" data-open-lead>Консультация</button>
+      <a class="btn btn-ghost" href="/catalog/">Каталог автомобилей</a>
+    </div>
+  </div>
+  <ul class="hero-facts" data-hero-fade>
+    <li><strong>1000+</strong><span>авто под ключ</span></li>
+    <li><strong>Вся Россия</strong><span>работаем по всей стране</span></li>
+    <li><strong>5+ лет</strong><span>опыта</span></li>
+  </ul>
+  <p class="hero-caption" data-hero-fade>${esc(carTitle(p))}</p>
+</section>`;
+}
+
+function hero() {
+  return PHOTO_HERO ? photoHero() : filmHero();
 }
 
 function promises() {

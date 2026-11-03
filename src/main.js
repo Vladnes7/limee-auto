@@ -1,4 +1,4 @@
-import { intro, pageHero, reveals, counters, steps, fan, delivery } from './js/motion.js';
+import { intro, hero, pageHero, reveals, counters, steps, fan, delivery } from './js/motion.js';
 import { film } from './js/film.js';
 import { initLead } from './js/lead.js';
 import { initCatalog } from './js/catalog.js';
@@ -123,7 +123,7 @@ reveals();
 pageHero();
 
 film();
-intro(() => {});
+intro(() => hero());
 counters();
 steps();
 fan();

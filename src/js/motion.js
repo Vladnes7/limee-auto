@@ -16,6 +16,23 @@ function arrival() {
   return document.referrer.startsWith(location.origin) ? 0.6 : 0;
 }
 
+// ---------- photo hero (variant B): entrance + scroll depth ----------
+export function hero() {
+  const h = document.querySelector('[data-hero]');
+  if (!h) return;
+  const lines = h.querySelectorAll('.hero-title .line > span');
+  const fades = h.querySelectorAll('[data-hero-fade]');
+  const media = h.querySelector('[data-hero-media]');
+  if (reduced()) return;
+  gsap.timeline({ delay: arrival() })
+    .fromTo(media, { scale: 1.14 }, { scale: 1, duration: 2.2, ease: EASE }, 0)
+    .fromTo(lines, { yPercent: 110 }, { yPercent: 0, duration: 1.1, stagger: 0.09, ease: EASE }, 0.1)
+    .fromTo(fades, { opacity: 0, y: 18 }, { opacity: 1, y: 0, duration: 0.9, stagger: 0.08, ease: EASE }, 0.45);
+
+  gsap.to(media, { yPercent: 12, ease: 'none', scrollTrigger: { trigger: h, start: 'top top', end: 'bottom top', scrub: true } });
+  gsap.to(h.querySelector('.hero-content'), { yPercent: -18, opacity: 0.2, ease: 'none', scrollTrigger: { trigger: h, start: 'top top', end: 'bottom top', scrub: true } });
+}
+
 // ---------- inner pages: heading block rises in ----------
 export function pageHero() {
   const h = document.querySelector('.page-hero, .car-hero-content');

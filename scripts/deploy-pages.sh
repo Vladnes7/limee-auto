@@ -19,6 +19,9 @@ touch "$OUT/.nojekyll" # serve files as they are, no Jekyll
 
 export GIT_INDEX_FILE="$INDEX"
 git --git-dir="$ROOT/.git" --work-tree="$OUT" -C "$OUT" add -A .
+# keep variant B (scripts/deploy-pages-b.sh) that lives in b/ of the published branch
+git fetch -q origin gh-pages || true
+if git cat-file -e origin/gh-pages:b 2>/dev/null; then git read-tree --prefix=b/ origin/gh-pages:b; fi
 TREE="$(git write-tree)"
 unset GIT_INDEX_FILE
 COMMIT="$(git commit-tree "$TREE" -m "Pages build of $(git rev-parse --short HEAD)")"
