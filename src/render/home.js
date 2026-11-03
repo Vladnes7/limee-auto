@@ -1,5 +1,5 @@
 import { company, links, leadForm } from '../content/site.js';
-import { esc, icon, brandMark, carImage, products, brands, bySlug, priceFrom, rub, carTitle, specLine, plural } from './ui.js';
+import { ver, stamp, esc, icon, brandMark, carImage, products, brands, bySlug, priceFrom, rub, carTitle, specLine, plural } from './ui.js';
 import { brandTrack, leadSection } from './layout.js';
 import map from '../data/map.json' with { type: 'json' };
 import allBrands from '../data/all-brands.json' with { type: 'json' };
@@ -26,11 +26,16 @@ const FILM = [
   { chip: 'Вручение автомобиля', title: 'Передаём<br><em>ключи</em>', lead: 'Проверенный автомобиль и полная прозрачность' },
 ];
 
+// One stamp for all film files: film.js appends it to every video and poster URL.
+function filmVer() {
+  return stamp(['film-1080-h', 'film-1080-h-rev', 'film-1080', 'film-1080-rev', 'film-720', 'film-720-rev', 'film-m-h', 'film-m-h-rev', 'film-m', 'film-m-rev', 'film-poster', 'film-poster-m'].map((f) => `/media/film/${f}.${f.includes('poster') ? 'jpg' : 'mp4'}`));
+}
+
 function filmHero() {
-  return `<section class="film" data-film aria-label="Путь автомобиля: от выбора до ключей">
+  return `<section class="film" data-film data-film-v="${filmVer()}" aria-label="Путь автомобиля: от выбора до ключей">
   <div class="film-track" data-film-track>
     <div class="film-stage">
-      <video class="film-video is-shown" data-film-video muted playsinline preload="auto" poster="/media/film/film-poster.jpg" aria-hidden="true" tabindex="-1" disablepictureinpicture></video>
+      <video class="film-video is-shown" data-film-video muted playsinline preload="auto" poster="${ver('/media/film/film-poster.jpg')}" aria-hidden="true" tabindex="-1" disablepictureinpicture></video>
       <video class="film-video film-rev" data-film-rev muted playsinline preload="auto" aria-hidden="true" tabindex="-1" disablepictureinpicture></video>
       <div class="film-shade" aria-hidden="true"></div>
       <p class="film-final" data-film-final><span class="film-final-tick" aria-hidden="true"></span>Автомобиль уже у вас дома</p>
@@ -178,7 +183,7 @@ function fan() {
     .map((p, i) => {
       const price = priceFrom(p);
       return `<a class="fan-card" role="listitem" href="/cars/${p.slug}/" style="--i:${i};--n:${cars.length}" data-fan-card>
-      ${carImage(p, 1, { sizes: '(max-width: 760px) 80vw, 340px', alt: '' })}
+      ${carImage(p, 1, { sizes: '(max-width: 760px) 80vw, 340px', early: true, alt: '' })}
       <span class="fan-info"><span class="fan-name">${esc(carTitle(p))}</span><span class="fan-price">${price ? `от <b data-price-cny="${p.minCny}">${rub(price)}</b>` : 'Цена по запросу'}</span></span>
     </a>`;
     })
@@ -297,7 +302,7 @@ function delivery() {
       <p class="section-note">Понятный и контролируемый процесс: от поиска подходящего автомобиля и проверки его состояния до оформления документов, логистики и передачи машины клиенту. Статус доставки виден в приложении.</p>
     </div>
     <div class="map" data-map>
-      <img class="map-dots" src="/media/art/eurasia-dots.svg" width="${w}" height="${h}" alt="" decoding="async">
+      <img class="map-dots" src="${ver('/media/art/eurasia-dots.svg')}" width="${w}" height="${h}" alt="" decoding="async">
       <svg class="map-layer" viewBox="0 0 ${w} ${h}" aria-hidden="true">
         <defs>
           <linearGradient id="route-grad" gradientUnits="userSpaceOnUse" x1="${from[0]}" y1="${from[1]}" x2="${to[0]}" y2="${to[1]}"><stop offset="0" stop-color="#d5ff00"/><stop offset="1" stop-color="#f6f7f0"/></linearGradient>
@@ -334,13 +339,13 @@ function checks() {
   <div class="checks-head">
     <h2 class="display section-title" id="checks-title" data-reveal>Что мы проверяем <em>при подборе</em> авто</h2>
     <p class="section-note" data-reveal>Проверяем автомобиль, документы, историю и техническое состояние. Вы получаете честный отчёт и уверенность в покупке.</p>
-    <img class="checks-img" src="/media/site/checks-1390.webp" srcset="/media/site/checks-700.webp 700w, /media/site/checks-1390.webp 1390w" sizes="(max-width: 760px) 100vw, 45vw" width="1390" height="1132" alt="" loading="lazy" decoding="async">
+    <img class="checks-img" src="/media/site/checks-1390.webp" srcset="/media/site/checks-700.webp 700w, /media/site/checks-1390.webp 1390w" sizes="(max-width: 760px) 100vw, 45vw" width="1390" height="1132" alt="" fetchpriority="low" decoding="async">
   </div>
   <ul class="check-cols">${cols
     .map(([t, d, l]) => `<li class="check-col" data-reveal><h3>${t}</h3><p>${d}</p><ul class="ticks">${l.map((x) => `<li>${x}</li>`).join('')}</ul></li>`)
     .join('')}</ul>
   <div class="review">
-    <img src="/media/site/review-1661.webp" srcset="/media/site/review-840.webp 840w, /media/site/review-1661.webp 1661w" sizes="100vw" width="1661" height="947" alt="" loading="lazy" decoding="async">
+    <img src="/media/site/review-1661.webp" srcset="/media/site/review-840.webp 840w, /media/site/review-1661.webp 1661w" sizes="100vw" width="1661" height="947" alt="" fetchpriority="low" decoding="async">
     <div class="review-copy">
       <h3 class="display review-title" data-reveal>Подробный фото <em>и видеообзор</em></h3>
       <ul class="ticks">

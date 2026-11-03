@@ -142,9 +142,13 @@ export function film() {
   // (Chrome's downlink estimate is often far too low on a first visit): the desktop always gets 1080p.
   // 720p stays only for data saver and 2G/3G.
   const slow = lean;
-  const src = { ...SRC, ...(video.canPlayType(HEVC_TYPE) === 'probably' ? SRC_HEVC : {}) };
+  // ?v= stamp from the page (render/home.js): a re-encoded film is never taken from an old browser cache
+  const v = root.dataset.filmV ? `?v=${root.dataset.filmV}` : '';
+  const src = Object.fromEntries(
+    Object.entries({ ...SRC, ...(video.canPlayType(HEVC_TYPE) === 'probably' ? SRC_HEVC : {}) }).map(([k, u]) => [k, u + v]),
+  );
 
-  video.poster = phone ? POSTER.phone : POSTER.desk;
+  video.poster = (phone ? POSTER.phone : POSTER.desk) + v;
   // Phone: the element only reads the header; the whole file comes in as a blob (below) and takes over.
   if (phone && !lean) video.preload = 'metadata';
   video.src = phone ? src.phone : slow ? src.sd : src.hd;

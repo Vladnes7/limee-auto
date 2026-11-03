@@ -1,5 +1,21 @@
 import catalog from '../data/catalog.json' with { type: 'json' };
 import marks from '../data/brand-marks.json' with { type: 'json' };
+import fs from 'node:fs';
+import path from 'node:path';
+import crypto from 'node:crypto';
+// Version stamp for a file in public/ that may be replaced under the same name (map, film, posters):
+// /media/x.svg -> /media/x.svg?v=<first 8 hex of its md5>, so a browser that cached the old file takes the new one.
+const verCache = new Map();
+export function ver(url) {
+  if (!verCache.has(url)) {
+    const file = path.join(process.cwd(), 'public', url.split('?')[0]);
+    verCache.set(url, fs.existsSync(file) ? `${url}?v=${crypto.createHash('md5').update(fs.readFileSync(file)).digest('hex').slice(0, 8)}` : url);
+  }
+  return verCache.get(url);
+}
+// One stamp for several files: changes when any of them changes.
+export const stamp = (urls) => crypto.createHash('md5').update(urls.map(ver).join()).digest('hex').slice(0, 8);
+
 
 export const esc = (s) =>
   String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -32,12 +48,14 @@ export function brandMark(slug, name, cls = '') {
   return `<span class="brand-mark ${cls}" style="--logo:url(/media/brands/${slug}.png);--ratio:${m.ratio}" role="img" aria-label="${esc(name)}"></span>`;
 }
 
-export function carImage(p, n = 1, { sizes = '(max-width: 760px) 100vw, 50vw', cls = '', eager = false, alt } = {}) {
+// eager: the first screen (high priority). early: further down the home page, fetched with the page at low
+// priority instead of on scroll, so on a slow line the card is not an empty black box when it scrolls in.
+export function carImage(p, n = 1, { sizes = '(max-width: 760px) 100vw, 50vw', cls = '', eager = false, early = false, alt } = {}) {
   const base = `/media/cars/${p.slug}/${n}`;
   const ph = p.photos.find((x) => x.n === n) || p.photos[0];
   const big = n === 1 && ph.w >= 1920 ? `, ${base}-1920.webp 1920w` : '';
   const ratio = ph.w && ph.h ? `width="${ph.w > 1280 ? 1280 : ph.w}" height="${Math.round((ph.h / ph.w) * (ph.w > 1280 ? 1280 : ph.w))}"` : '';
-  return `<img class="${cls}" src="${base}-1280.webp" srcset="${base}-640.webp 640w, ${base}-1280.webp 1280w${big}" sizes="${sizes}" ${ratio} alt="${esc(alt ?? carTitle(p))}" ${eager ? 'fetchpriority="high"' : 'loading="lazy"'} decoding="async">`;
+  return `<img class="${cls}" src="${base}-1280.webp" srcset="${base}-640.webp 640w, ${base}-1280.webp 1280w${big}" sizes="${sizes}" ${ratio} alt="${esc(alt ?? carTitle(p))}" ${eager ? 'fetchpriority="high"' : early ? 'fetchpriority="low"' : 'loading="lazy"'} decoding="async">`;
 }
 
 export const products = catalog.products;

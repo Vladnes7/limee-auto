@@ -33,4 +33,11 @@ ssh sites "set -e
   curl -s -o /dev/null -w 'page %{http_code}\n' http://127.0.0.1:$PORT/
   curl -s -o /dev/null -w 'catalog %{http_code}\n' http://127.0.0.1:$PORT/catalog/
   curl -sI http://127.0.0.1:$PORT/media/film/film-720.mp4 | head -4"
+# Самопроверка: на сервере ровно эта сборка, а страницы и медиа отдаются с перепроверкой кэша.
+LOCAL_MD5="$(md5 -q dist/index.html)"
+ssh sites "set -e
+  [ \"\$(md5sum /var/www/$NAME/index.html | cut -d' ' -f1)\" = '$LOCAL_MD5' ] || { echo 'ОШИБКА: на сервере не та главная'; exit 1; }
+  curl -sI http://127.0.0.1:$PORT/ | grep -qi 'cache-control: no-cache' || { echo 'ОШИБКА: страница без Cache-Control: no-cache'; exit 1; }
+  curl -sI http://127.0.0.1:$PORT/media/art/eurasia-dots.svg | grep -qi 'cache-control: no-cache' || { echo 'ОШИБКА: медиа кэшируются вслепую'; exit 1; }
+  echo 'проверка: сборка совпадает, кэш перепроверяется'"
 echo "Готово: http://37.77.106.12:$PORT"
