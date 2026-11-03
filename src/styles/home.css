@@ -1680,6 +1680,12 @@
   opacity: 0.55;
 }
 
+/* the Korea line draws together with the China one, a little lighter: the car drives the China line */
+.route-kr {
+  stroke: url(#route-grad-kr);
+  stroke-width: 3;
+}
+
 .map-city circle {
   fill: var(--on-dark);
 }

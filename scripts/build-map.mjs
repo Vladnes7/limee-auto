@@ -14,6 +14,7 @@ const land = feature(req('world-atlas/land-110m.json'), req('world-atlas/land-11
 const countries = feature(req('world-atlas/countries-110m.json'), req('world-atlas/countries-110m.json').objects.countries);
 const russia = countries.features.find((f) => Number(f.id) === 643);
 const china = countries.features.find((f) => Number(f.id) === 156);
+const korea = countries.features.find((f) => Number(f.id) === 410); // South Korea
 
 const W = 1200, H = 680, STEP = 7.5;
 const projection = geoAzimuthalEqualArea().rotate([-82, -50]).fitExtent(
@@ -21,12 +22,12 @@ const projection = geoAzimuthalEqualArea().rotate([-82, -50]).fitExtent(
   { type: 'MultiPoint', coordinates: [[24, 70], [170, 68], [30, 28], [125, 18], [100, 80], [60, 78]] },
 );
 
-const groups = { world: [], russia: [], china: [] };
+const groups = { world: [], russia: [], china: [], korea: [] };
 for (let y = STEP / 2; y < H; y += STEP) {
   for (let x = STEP / 2; x < W; x += STEP) {
     const ll = projection.invert([x, y]);
     if (!ll || !geoContains(land, ll)) continue;
-    const key = geoContains(china, ll) ? 'china' : geoContains(russia, ll) ? 'russia' : 'world';
+    const key = geoContains(china, ll) ? 'china' : geoContains(korea, ll) ? 'korea' : geoContains(russia, ll) ? 'russia' : 'world';
     groups[key].push(`M${x.toFixed(1)} ${y.toFixed(1)}h0`);
   }
 }
@@ -36,30 +37,36 @@ const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" wid
 <path d="${groups.world.join('')}" stroke="#34372f" stroke-width="2.4"/>
 <path d="${groups.russia.join('')}" stroke="#b9bcb4" stroke-width="2.8"/>
 <path d="${groups.china.join('')}" stroke="#d5ff00" stroke-width="2.9"/>
+<path d="${groups.korea.join('')}" stroke="#d5ff00" stroke-width="2.9"/>
 </g></svg>`;
 fs.mkdirSync(path.join(site, 'public/media/art'), { recursive: true });
 fs.writeFileSync(path.join(site, 'public/media/art/eurasia-dots.svg'), svg);
 
-// Route: along the great circle from Beijing to Moscow, bowed slightly north so it reads as a journey.
-const from = [116.4, 39.9], to = [37.62, 55.75];
-const interp = geoInterpolate(from, to);
-const pts = Array.from({ length: 40 }, (_, i) => {
-  const t = i / 39;
-  const [lon, lat] = interp(t);
-  return projection([lon, lat + Math.sin(Math.PI * t) * 4]);
-});
-let d = `M${pts[0][0].toFixed(1)} ${pts[0][1].toFixed(1)}`;
-for (let i = 1; i < pts.length - 1; i++) {
-  const mx = (pts[i][0] + pts[i + 1][0]) / 2, my = (pts[i][1] + pts[i + 1][1]) / 2;
-  d += `Q${pts[i][0].toFixed(1)} ${pts[i][1].toFixed(1)} ${mx.toFixed(1)} ${my.toFixed(1)}`;
+// Routes: along the great circle to Moscow, bowed north so they read as a journey. Beijing is the main
+// one (the car drives it); Seoul's bows a little further so the two lines stay apart.
+const to = [37.62, 55.75];
+function route(from, bow) {
+  const interp = geoInterpolate(from, to);
+  const pts = Array.from({ length: 40 }, (_, i) => {
+    const t = i / 39;
+    const [lon, lat] = interp(t);
+    return projection([lon, lat + Math.sin(Math.PI * t) * bow]);
+  });
+  let d = `M${pts[0][0].toFixed(1)} ${pts[0][1].toFixed(1)}`;
+  for (let i = 1; i < pts.length - 1; i++) {
+    const mx = (pts[i][0] + pts[i + 1][0]) / 2, my = (pts[i][1] + pts[i + 1][1]) / 2;
+    d += `Q${pts[i][0].toFixed(1)} ${pts[i][1].toFixed(1)} ${mx.toFixed(1)} ${my.toFixed(1)}`;
+  }
+  return d + `L${pts.at(-1)[0].toFixed(1)} ${pts.at(-1)[1].toFixed(1)}`;
 }
-d += `L${pts.at(-1)[0].toFixed(1)} ${pts.at(-1)[1].toFixed(1)}`;
+const from = [116.4, 39.9], fromKr = [126.98, 37.57];
+const d = route(from, 4), dKr = route(fromKr, 9);
 
 const label = (ll) => projection(ll).map((n) => +n.toFixed(1));
 const map = {
-  w: W, h: H, route: d,
-  from: label(from), to: label(to),
+  w: W, h: H, route: d, routeKr: dKr,
+  from: label(from), fromKr: label(fromKr), to: label(to),
   labels: { russia: label([96, 63]), china: label([103, 33]), moscow: label(to) },
 };
 fs.writeFileSync(path.join(site, 'src/data/map.json'), JSON.stringify(map));
-console.log('dots', groups.world.length, groups.russia.length, groups.china.length, 'svg', Math.round(svg.length / 1024) + 'KB');
+console.log('dots', groups.world.length, groups.russia.length, groups.china.length, groups.korea.length, 'svg', Math.round(svg.length / 1024) + 'KB');

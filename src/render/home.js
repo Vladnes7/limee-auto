@@ -287,11 +287,13 @@ function steps() {
 
 function delivery() {
   const stages = ['Выбор и проверка', 'Бронь и договор', 'Транспортировка', 'Таможня, СБКТС и ЭПТС', 'Вручение автомобиля'];
-  const { w, h, route, from, to, labels } = map;
+  const { w, h, route, routeKr, from, fromKr, to } = map;
+  // label spots in the viewBox: tuned by eye so they stay inside the phone crop (x 170…1030)
+  const labels = { ...map.labels, korea: [fromKr[0] + 6, fromKr[1] + 44] };
   return `<section class="delivery" aria-labelledby="delivery-title" data-delivery>
   <div class="delivery-sticky">
     <div class="delivery-head">
-      <h2 class="display section-title" id="delivery-title">Из Китая <em>в Россию</em></h2>
+      <h2 class="display section-title" id="delivery-title">Из Китая и Кореи <em>в Россию</em></h2>
       <p class="section-note">Понятный и контролируемый процесс: от поиска подходящего автомобиля и проверки его состояния до оформления документов, логистики и передачи машины клиенту. Статус доставки виден в приложении.</p>
     </div>
     <div class="map" data-map>
@@ -299,15 +301,20 @@ function delivery() {
       <svg class="map-layer" viewBox="0 0 ${w} ${h}" aria-hidden="true">
         <defs>
           <linearGradient id="route-grad" gradientUnits="userSpaceOnUse" x1="${from[0]}" y1="${from[1]}" x2="${to[0]}" y2="${to[1]}"><stop offset="0" stop-color="#d5ff00"/><stop offset="1" stop-color="#f6f7f0"/></linearGradient>
+          <linearGradient id="route-grad-kr" gradientUnits="userSpaceOnUse" x1="${fromKr[0]}" y1="${fromKr[1]}" x2="${to[0]}" y2="${to[1]}"><stop offset="0" stop-color="#d5ff00"/><stop offset="1" stop-color="#f6f7f0"/></linearGradient>
           <filter id="route-glow" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="6"/></filter>
         </defs>
+        <path class="route-ghost" d="${routeKr}"/>
+        <path class="route-line route-kr" d="${routeKr}" pathLength="1" data-route/>
         <path class="route-ghost" d="${route}"/>
         <path class="route-glow" d="${route}" filter="url(#route-glow)" pathLength="1" data-route/>
         <path class="route-line" d="${route}" pathLength="1" data-route/>
         <g class="map-city map-city-from" transform="translate(${from.join(',')})"><circle r="7"/><circle class="pulse" r="7"/></g>
+        <g class="map-city map-city-from" transform="translate(${fromKr.join(',')})"><circle r="6"/><circle class="pulse" r="6"/></g>
         <g class="map-city map-city-to" transform="translate(${to.join(',')})" data-city-to><circle r="8"/><circle class="pulse" r="8"/><text x="-16" y="-20" text-anchor="end">Москва</text></g>
         <text class="map-country" x="${labels.russia[0]}" y="${labels.russia[1]}" text-anchor="middle">РОССИЯ</text>
         <text class="map-country map-country-cn" x="${labels.china[0]}" y="${labels.china[1]}" text-anchor="middle">КИТАЙ</text>
+        <text class="map-country map-country-cn" x="${labels.korea[0]}" y="${labels.korea[1]}" text-anchor="middle">КОРЕЯ</text>
         <g class="map-car" data-map-car transform="translate(${from.join(',')})"><circle r="22"/><path d="M-12 4c1-4 4-7 9-8l6-1c4 0 7 3 9 7v4h-24Z"/><circle class="wheel" cx="-6" cy="8" r="2.6"/><circle class="wheel" cx="6" cy="8" r="2.6"/></g>
       </svg>
     </div>

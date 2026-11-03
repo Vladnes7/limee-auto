@@ -36,6 +36,15 @@ const SRC = {
   hd: '/media/film/film-1080.mp4',
   hdRev: '/media/film/film-1080-rev.mp4',
 };
+// The same films in HEVC: 1080p quality at about half the weight (VMAF 98 vs 98.9 for H.264 1080p and
+// 90.9 for 720p). Used wherever the browser decodes HEVC: Safari, Chrome on Mac and most Windows/Android.
+const SRC_HEVC = {
+  phone: '/media/film/film-m-h.mp4',
+  phoneRev: '/media/film/film-m-h-rev.mp4',
+  hd: '/media/film/film-1080-h.mp4',
+  hdRev: '/media/film/film-1080-h-rev.mp4',
+};
+const HEVC_TYPE = 'video/mp4; codecs="hvc1.1.6.L120.90"';
 const POSTER = { phone: '/media/film/film-poster-m.jpg', desk: '/media/film/film-poster.jpg' };
 
 const smooth = (x) => x * x * (3 - 2 * x);
@@ -129,11 +138,16 @@ export function film() {
   const phone = matchMedia('(max-width: 760px)').matches;
   const conn = navigator.connection || {};
   const lean = Boolean(conn.saveData) || /(^|-)[23]g$/.test(conn.effectiveType || '');
+  // Quality must not depend on which server the site is opened from or on a guess at the line speed
+  // (Chrome's downlink estimate is often far too low on a first visit): the desktop always gets 1080p.
+  // 720p stays only for data saver and 2G/3G.
+  const slow = lean;
+  const src = { ...SRC, ...(video.canPlayType(HEVC_TYPE) === 'probably' ? SRC_HEVC : {}) };
 
   video.poster = phone ? POSTER.phone : POSTER.desk;
   // Phone: the element only reads the header; the whole file comes in as a blob (below) and takes over.
   if (phone && !lean) video.preload = 'metadata';
-  video.src = phone ? SRC.phone : SRC.sd;
+  video.src = phone ? src.phone : slow ? src.sd : src.hd;
   root.classList.add('is-live');
 
   let shown = video; // the element on screen
@@ -628,45 +642,44 @@ export function film() {
     rev.src = url;
   }
 
-  const filmInView = () => root.getBoundingClientRect().bottom > 0;
-  const whenFilmInView = (fn) => {
-    if (filmInView()) return fn();
-    const io = new IntersectionObserver((en) => {
-      if (!en[0].isIntersecting) return;
-      io.disconnect();
-      fn();
-    });
-    io.observe(root);
-  };
-
   function upgrade() {
     if (lean || still || !rev) return;
     if (phone) {
-      fetchBlob(SRC.phone).then((f) => {
+      fetchBlob(src.phone).then((f) => {
         if (f) prepareNext(f.url);
-        fetchBlob(SRC.phoneRev).then((r) => r && useRev(r.url));
+        fetchBlob(src.phoneRev).then((r) => r && useRev(r.url));
       });
       return;
     }
-    // Desktop: the reversed 720p film first (14 MB). The 1080p pair (78 MB) only on a fast line, judged
-    // by how quickly that download came in, and only while the film is on screen: on an ordinary line
-    // it would take the bandwidth the photos further down the page need, and the page felt slow.
-    fetchBlob(SRC.sdRev).then((r) => {
-      if (!r) return;
-      useRev(r.url);
-      log(`line ~${r.mbps.toFixed(0)} Mbit/s`);
-      if (r.mbps < 25) return;
-      whenFilmInView(() =>
-        fetchBlob(SRC.hd).then((f) => {
-          if (!f) return;
-          prepareNext(f.url);
-          fetchBlob(SRC.hdRev).then((h) => h && useRev(h.url));
-        }),
-      );
-    });
+    // Desktop: the forward film already streams in its final quality; only the reversed one comes in as
+    // a blob, and only once the forward file is (nearly) all buffered, so the two never fight for the line.
+    whenBuffered(() =>
+      fetchBlob(slow ? src.sdRev : src.hdRev).then((r) => {
+        if (!r) return;
+        useRev(r.url);
+        log(`reversed in, line ~${r.mbps.toFixed(0)} Mbit/s`);
+      }),
+    );
   }
-  // Phone: the film is the whole first screen, fetch it at once. Desktop: the 720p file streams fine,
-  // the 1080p one waits for the rest of the page.
+  // Calls fn once the forward video has buffered to (nearly) its end, or after 8 s (Chrome never buffers
+  // the whole file, so the timer is what usually starts the reversed download).
+  function whenBuffered(fn) {
+    let done = false;
+    const go = () => {
+      if (done) return;
+      done = true;
+      video.removeEventListener('progress', check);
+      fn();
+    };
+    const check = () => {
+      const b = video.buffered;
+      if (b.length && video.duration && b.end(b.length - 1) >= video.duration - 0.5) go();
+    };
+    video.addEventListener('progress', check);
+    setTimeout(go, 8000);
+    check();
+  }
+  // Phone: the film is the whole first screen, fetch it at once. Desktop: after the page has loaded.
   if (phone) upgrade();
   else if (document.readyState === 'complete') setTimeout(upgrade, 2500);
   else addEventListener('load', () => setTimeout(upgrade, 2500));
