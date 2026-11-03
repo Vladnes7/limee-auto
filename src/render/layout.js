@@ -114,7 +114,7 @@ export function footer() {
     <div class="footer-bg contours" aria-hidden="true"></div>
     <div class="footer-statement">
       ${carOutline('footer-outline')}
-      <p class="display footer-slogan">Премиальные автомобили <em>под заказ</em> из любой точки мира</p>
+      <p class="display footer-slogan">Премиальные автомобили <em>под заказ</em> из Китая и Кореи</p>
       <p class="footer-about">${company.about}</p>
     </div>
     <div class="footer-cols">
