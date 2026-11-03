@@ -1268,7 +1268,9 @@
   font-variant-numeric: tabular-nums;
 }
 
-@media (hover: hover) {
+/* the lift belongs to the fanned-out layout only: in the phone/narrow-window row (≤760px) it threw the
+   hovered card up and over its neighbour, and a trackpad scroll passing cards under the pointer made them jump */
+@media (hover: hover) and (min-width: 761px) {
   .fan-card:hover,
   .fan-card:focus-visible {
     transform:
